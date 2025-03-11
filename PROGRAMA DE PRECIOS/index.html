@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRECIOS CONSTRUAMERICANA</title>
+    <link rel="shortcut icon" href="imagenes/descarga.ico">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1e1e1e;
+            color: #4caf50;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 30px;
+            background: #2c2c2c;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+        }
+        input, button {
+            width: calc(100% - 20px);
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            outline: none;
+        }
+        input {
+            background: #444;
+            color: #4caf50;
+            border: 2px solid #666;
+            text-align: center;
+        }
+        input:focus {
+            border-color: #4caf50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
+        }
+        button {
+            background: #4caf50;
+            color: #1e1e1e;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+        }
+        button:hover {
+            background: #66bb6a;
+            transform: scale(1.05);
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 15px;
+            border: 1px solid #555;
+            text-align: center;
+            color: #4caf50;
+        }
+        th {
+            background: #444;
+        }
+        tr:nth-child(even) {
+            background: #3a3a3a;
+        }
+        tr:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>PRECIOS CONSTRUAMERICANA</h1>
+    <div class="container">
+        <input type="text" id="nombre" placeholder="Nombre del producto" onkeydown="moverSiguiente(event, 'precioInicial')">
+        <input type="number" id="precioInicial" placeholder="Precio Inicial" step="0.01" onkeydown="moverSiguiente(event, 'botonAgregar')">
+        <button id="botonAgregar" onclick="agregarProducto()">Agregar Producto</button>
+        <table id="tablaProductos">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Precio Inicial</th>
+                    <th>Precio Total de Liquidación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        // Importar Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBjQHLXYMpFPmtOM3LSQ8gAd5NLZzWAmyc",
+            authDomain: "precios-construamericana.firebaseapp.com",
+            projectId: "precios-construamericana",
+            storageBucket: "precios-construamericana.appspot.com",
+            messagingSenderId: "480688008745",
+            appId: "1:480688008745:web:82e6afba774f0a60293638"
+        };
+
+        // Inicializar Firebase y Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Función para manejar la tecla Enter en los inputs
+        function moverSiguiente(event, siguienteId) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                document.getElementById(siguienteId).focus();
+            }
+        }
+
+        // Agregar producto a Firestore
+        async function agregarProducto() {
+            let nombre = document.getElementById("nombre").value.trim().toUpperCase();
+            let precioInicial = parseFloat(document.getElementById("precioInicial").value);
+
+            if (!nombre || isNaN(precioInicial) || precioInicial <= 0) {
+                alert("Ingrese valores válidos.");
+                return;
+            }
+
+            let precioTotal = (precioInicial / 0.6).toFixed(2);
+
+            await addDoc(collection(db, "productos"), {
+                nombre,
+                precioInicial,
+                precioTotal
+            });
+
+            document.getElementById("nombre").value = "";
+            document.getElementById("precioInicial").value = "";
+            document.getElementById("nombre").focus();
+            actualizarTabla();
+        }
+
+        // Actualizar tabla con productos de Firestore
+        async function actualizarTabla() {
+            let tbody = document.querySelector("#tablaProductos tbody");
+            tbody.innerHTML = "";
+
+            const querySnapshot = await getDocs(collection(db, "productos"));
+            querySnapshot.forEach((doc) => {
+                let producto = doc.data();
+                let fila = `<tr>
+                    <td>${producto.nombre}</td>
+                    <td>${producto.precioInicial}</td>
+                    <td>${producto.precioTotal}</td>
+                    <td>
+                        <button onclick='eliminarProducto("${doc.id}")'>Eliminar</button>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += fila;
+            });
+        }
+
+        // Confirmar y eliminar producto de Firestore
+        async function eliminarProducto(id) {
+            if (confirm("¿Está seguro de que desea eliminar este producto?")) {
+                await deleteDoc(doc(db, "productos", id));
+                actualizarTabla();
+            }
+        }
+
+        // Cargar productos al iniciar
+        window.onload = actualizarTabla;
+    </script>
+</body>
+</html>
